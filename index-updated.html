@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Hoopscope — Data-driven basketball analytics, training plans, and pro insights.">
+  <meta property="og:title" content="Hoopscope: Data-Driven Training">
+  <meta property="og:description" content="Personalized AI training plans and pro-level analytics for basketball players.">
+  <title>Hoopscope — Data-Driven Training</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    /* condensed updated styles, accessibility and performance-minded */
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;line-height:1.6;background:#000;color:#e6eef8}
+    .card-bg{background:#0b0b0b;border:1px solid #222;padding:1rem;border-radius:1rem}
+    .loader{border:4px solid rgba(255,255,255,.12);border-left-color:#fb923c;border-radius:9999px;width:1rem;height:1rem;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    img[loading]{opacity:0;transition:opacity .3s ease-in}
+    img[loading].loaded{opacity:1}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  </style>
+</head>
+<body>
+  <header class="p-4 fixed top-0 left-0 right-0 bg-black/60 backdrop-blur z-40">
+    <nav class="container mx-auto flex items-center justify-between">
+      <a href="#hero" class="flex items-center gap-2" aria-label="Hoopscope homepage">
+        <span class="bg-orange-500 text-white font-bold w-8 h-8 flex items-center justify-center rounded">H</span>
+        <span class="text-white font-bold">Hoopscope</span>
+      </a>
+      <div class="hidden md:flex gap-6 text-slate-300">
+        <a href="#features">Features</a>
+        <a href="#why-hoopscope">Why Hoopscope</a>
+        <a href="hoopscope-blog-final.html">Blog</a>
+      </div>
+      <div class="flex gap-2">
+        <a href="#signin" class="text-slate-300">Sign In</a>
+        <a href="#cta" class="bg-orange-600 text-white px-4 py-2 rounded">Get Early Access</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="pt-28">
+    <!-- Hero -->
+    <section id="hero" class="text-center py-24" style="background-image:linear-gradient(rgba(0,0,0,.6),rgba(0,0,0,1)),url('https://images.unsplash.com/photo-1515523110800-9415d13b84a8?q=80&w=2070&auto=format&fit=crop');background-size:cover;background-position:center;">
+      <div class="container mx-auto px-4">
+        <h1 class="text-5xl md:text-7xl font-black text-white">Know the Game. Own Yours.</h1>
+        <p class="text-slate-300 mt-4 max-w-3xl mx-auto">Track your game. Study the pros. Train with purpose.</p>
+        <div class="mt-8 flex justify-center gap-4">
+          <a href="#cta" class="bg-orange-600 text-white px-6 py-3 rounded">Get Early Access</a>
+          <a href="#demo" class="bg-zinc-700/50 text-white px-6 py-3 rounded">Watch Demo</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI Training -->
+    <section id="ai-training" class="py-12">
+      <div class="container mx-auto px-4 max-w-2xl">
+        <h2 class="text-3xl font-bold text-white">AI-Powered Training</h2>
+        <p class="text-slate-300">Describe your goals and get a personalized workout plan.</p>
+        <div class="card-bg mt-6">
+          <label for="workout-prompt" class="sr-only">Training prompt</label>
+          <textarea id="workout-prompt" rows="4" class="w-full p-3 bg-zinc-900 rounded border border-zinc-700" placeholder="e.g., I want to improve my ball handling and finishing at the rim. I have 60 minutes and access to cones and a hoop."></textarea>
+          <div class="mt-4 flex gap-2">
+            <button id="generate-plan-btn" class="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded" aria-live="polite">
+              <span id="generate-btn-text">Generate Plan</span>
+              <div id="generate-loader" class="loader hidden" aria-hidden="true"></div>
+            </button>
+            <button id="clear-plan-btn" class="bg-zinc-700 text-white px-4 py-2 rounded">Clear</button>
+          </div>
+          <div id="workout-plan-output" class="mt-4 text-slate-300" role="status"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Accessibility helper for images to lazy-load with JS fallback
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('img[loading="lazy"]').forEach(img => {
+        if (img.complete) img.classList.add('loaded');
+        img.addEventListener('load', () => img.classList.add('loaded'));
+      });
+
+      const generateBtn = document.getElementById('generate-plan-btn');
+      const generateLoader = document.getElementById('generate-loader');
+      const generateText = document.getElementById('generate-btn-text');
+      const output = document.getElementById('workout-plan-output');
+
+      // Call secure server endpoint which uses OpenAI key on server
+      async function callLLM(prompt, signal) {
+        try {
+          const res = await fetch('/api/generate-plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt }),
+            signal
+          });
+          if (!res.ok) throw new Error('Server error: ' + res.status);
+          const data = await res.json();
+          return data;
+        } catch (err) {
+          console.error(err);
+          throw err;
+        }
+      }
+
+      generateBtn.addEventListener('click', async () => {
+        const prompt = document.getElementById('workout-prompt').value.trim();
+        if (!prompt) { output.innerHTML = '<p class="text-red-400">Please describe your goals.</p>'; return; }
+        generateText.classList.add('hidden');
+        generateLoader.classList.remove('hidden');
+        generateBtn.disabled = true;
+        output.innerHTML = '';
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+
+        try {
+          const res = await callLLM(prompt, controller.signal);
+          clearTimeout(timeout);
+
+          if (res && res.planHtml) {
+            output.innerHTML = res.planHtml;
+          } else if (res && res.text) {
+            output.innerText = res.text;
+          } else {
+            output.innerHTML = '<p class="text-red-400">Unexpected response from AI. Try again.</p>';
+          }
+        } catch (e) {
+          if (e.name === 'AbortError') output.innerHTML = '<p class="text-red-400">Request timed out. Try again.</p>';
+          else output.innerHTML = '<p class="text-red-400">Error generating plan. Check console for details.</p>';
+        } finally {
+          generateText.classList.remove('hidden');
+          generateLoader.classList.add('hidden');
+          generateBtn.disabled = false;
+        }
+      });
+
+      document.getElementById('clear-plan-btn').addEventListener('click', () => {
+        document.getElementById('workout-prompt').value = '';
+        output.innerHTML = '';
+      });
+    });
+  </script>
+</body>
+</html>
